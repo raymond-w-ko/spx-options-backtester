@@ -4,7 +4,9 @@
    [taoensso.timbre :as timbre
     :refer [log  trace  debug  info  warn  error  fatal  report
             logf tracef debugf infof warnf errorf fatalf reportf
-            spy get-env]]))
+            spy get-env]]
+   
+   [app.verifier]))
 
 (defn -main []
   (debugf "MEM %dG" (/ (-> (Runtime/getRuntime) .maxMemory) 1024 1024))
