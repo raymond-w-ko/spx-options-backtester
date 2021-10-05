@@ -28,9 +28,24 @@
         (cons (.next i) (iter-seq iterable i))))))
 
 
-(defn print-key [db-key]
-  (debug "timestamp" (.getEpochSecond (.-quoteDateTime db-key))
-         "root" (.-root db-key)
-         "optionType" (.-optionType db-key)
-         "expirationDate" (.-expirationDate db-key)
-         "strike" (.-strike db-key)))
+(defn db-key-str [db-key]
+  (->> [(.-quoteDateTime db-key)
+        (str (.-root db-key))
+        (.-optionType db-key)
+        (.-expirationDate db-key)
+        (.-strike db-key)]
+       (interpose " ")
+       (apply str)))
+
+(defn print-db-key [db-key]
+  (debug (db-key-str db-key)))
+
+(defn db-value-str [db-value]
+  (->> ["B" (format "%.2f" (.-bid db-value))
+        "A" (format "%.2f" (.-ask db-value))
+        "δ" (.-delta db-value)]
+       (interpose " ")
+       (apply str)))
+
+(defn db-pair-str [[db-key db-value]]
+  (str (db-key-str db-key) " - " (db-value-str db-value)))
