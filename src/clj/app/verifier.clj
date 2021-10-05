@@ -24,7 +24,7 @@
             logf tracef debugf infof warnf errorf fatalf reportf
             spy get-env]]
 
-   [app.utils :refer [iter-seq print-key]]
+   [app.utils :refer [iter-seq print-db-key]]
    [app.lmdb :as lmdb :refer [create-read-env open-db]]
    [clojure.string :as str]))
 
