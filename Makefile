@@ -2,7 +2,7 @@ JVM_ARGS := -J-Djdk.attach.allowAttachSelf
 CLJ_EXTRA_SAFETY_ARGS := -J-Dclojure.core.async.go-checking=true
 
 javac:
-	clj -M:javac
+	clj -T:build javac
 repl:
 	clojure $(JVM_ARGS) $(CLJ_EXTRA_SAFETY_ARGS) -M:repl
 run:
