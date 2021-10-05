@@ -4,3 +4,6 @@
 
 # Java
 /classes
+
+# output
+/*.log
