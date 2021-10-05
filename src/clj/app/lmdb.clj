@@ -27,14 +27,8 @@
 
 (def db-max-size (* 1024 1024 1024 575))
 (def normal-read-env-flags (into-array org.lmdbjava.EnvFlags
-                                       [EnvFlags/MDB_RDONLY_ENV]))
-(def dangerous-fast-write-env-flags
-  (into-array org.lmdbjava.EnvFlags
-              [EnvFlags/MDB_FIXEDMAP
-               EnvFlags/MDB_MAPASYNC
-               EnvFlags/MDB_NOMETASYNC
-               EnvFlags/MDB_NOSYNC
-               EnvFlags/MDB_NORDAHEAD]))
+                                       [EnvFlags/MDB_RDONLY_ENV
+                                        EnvFlags/MDB_NORDAHEAD]))
 (defn create-read-env
   (^org.lmdbjava.Env
    [^String db-dir]
@@ -42,6 +36,12 @@
        (.setMapSize db-max-size)
        (.setMaxDbs 1)
        (.open (io/file db-dir) normal-read-env-flags))))
+(def dangerous-fast-write-env-flags
+  (into-array org.lmdbjava.EnvFlags
+              [EnvFlags/MDB_MAPASYNC
+               EnvFlags/MDB_NOMETASYNC
+               EnvFlags/MDB_NOSYNC
+               EnvFlags/MDB_NORDAHEAD]))
 (defn  create-write-env
   (^org.lmdbjava.Env
    [^String db-dir]
