@@ -6,7 +6,8 @@
             logf tracef debugf infof warnf errorf fatalf reportf
             spy get-env]]
    
-   [app.verifier]))
+   [app.verifier]
+   [app.backtester]))
 
 (defn -main []
   (debugf "MEM %dG" (/ (-> (Runtime/getRuntime) .maxMemory) 1024 1024))
