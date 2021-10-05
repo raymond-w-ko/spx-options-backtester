@@ -4,7 +4,7 @@ import static app.types.Utils.ByteBufferToInstant;
 import static app.types.Utils.ExpDateToInt;
 import static app.types.Utils.InstantToByteBuffer;
 import static app.types.Utils.IntToExpDate;
-import static app.types.Utils.QuoteDateTimeToJodaInstant;
+import static app.types.Utils.QuoteDateTimeToInstant;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -13,14 +13,12 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.StringUtils;
-import org.joda.time.Instant;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
+import java.time.Instant;
 
 public final class DbKey {
 
   /// use joda time for instant
-  public org.joda.time.Instant quoteDateTime;
+  public java.time.Instant quoteDateTime;
   /// must be a string of a length of 5
   public String root;
   /// P or C
@@ -29,14 +27,19 @@ public final class DbKey {
   public String expirationDate;
   public int strike;
 
-  public DbKey() {}
+  public DbKey() {
+    this.root = "     ";
+    this.optionType = 'P';
+    this.expirationDate = "0000-00-00";
+    this.strike = 0;
+  }
 
   public static DbKey fromCsvLineTokens(String[] tokens) {
     DbKey k = new DbKey();
     // [0] is always "^SPX"
 
     // [1] is quote_datetime
-    k.quoteDateTime = QuoteDateTimeToJodaInstant(tokens[1]);
+    k.quoteDateTime = QuoteDateTimeToInstant(tokens[1]);
 
     // [2] is root
     {
