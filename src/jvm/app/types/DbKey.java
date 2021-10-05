@@ -14,11 +14,14 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.StringUtils;
 import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
 
-public final class DbKey {
+public final class DbKey implements Cloneable {
+  public static ZoneId zoneId = ZoneId.of("US/Eastern");
 
   /// use joda time for instant
-  public java.time.Instant quoteDateTime;
+  public java.time.ZonedDateTime quoteDateTime;
   /// must be a string of a length of 5
   public String root;
   /// P or C
@@ -33,13 +36,17 @@ public final class DbKey {
     this.expirationDate = "0000-00-00";
     this.strike = 0;
   }
+  
+  public Object clone()throws CloneNotSupportedException{  
+    return super.clone();  
+  }  
 
   public static DbKey fromCsvLineTokens(String[] tokens) {
     DbKey k = new DbKey();
     // [0] is always "^SPX"
 
     // [1] is quote_datetime
-    k.quoteDateTime = QuoteDateTimeToInstant(tokens[1]);
+    k.quoteDateTime = ZonedDateTime.ofInstant(QuoteDateTimeToInstant(tokens[1]), zoneId);
 
     // [2] is root
     {
@@ -82,7 +89,7 @@ public final class DbKey {
     final var buf = new UnsafeBuffer(bb);
     var i = 0;
 
-    buf.putBytes(i, InstantToByteBuffer(quoteDateTime), 4, 4);
+    buf.putBytes(i, InstantToByteBuffer(quoteDateTime.toInstant()), 4, 4);
     i += 4;
     buf.putStringWithoutLengthUtf8(i, root);
     i += 5;
@@ -100,7 +107,7 @@ public final class DbKey {
     final var k = new DbKey();
     var i = 0;
 
-    k.quoteDateTime = ByteBufferToInstant(buf, i);
+    k.quoteDateTime = ZonedDateTime.ofInstant(ByteBufferToInstant(buf, i), zoneId);
     i += 4;
     k.root = buf.getStringWithoutLengthUtf8(i, 5);
     i += 5;
