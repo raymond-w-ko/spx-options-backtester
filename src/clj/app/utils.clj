@@ -43,7 +43,11 @@
 (defn db-value-str [db-value]
   (->> ["B" (format "%.2f" (.-bid db-value))
         "A" (format "%.2f" (.-ask db-value))
-        "δ" (.-delta db-value)]
+        "δ" (.-delta db-value)
+        "O" (.-open db-value)
+        "H" (.-high db-value)
+        "L" (.-low db-value)
+        "C" (.-close db-value)]
        (interpose " ")
        (apply str)))
 
