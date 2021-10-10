@@ -6,6 +6,6 @@ javac:
 repl:
 	clojure $(JVM_ARGS) $(CLJ_EXTRA_SAFETY_ARGS) -M:repl
 run:
-	clojure $(JVM_ARGS) -J-Xmx16G -M:none -m app.core
+	clojure $(JVM_ARGS) -J-Xmx16G -M:none -m app.backtester
 upgrade-deps:
 	clojure -M:outdated --upgrade
