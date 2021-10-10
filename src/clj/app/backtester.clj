@@ -43,6 +43,7 @@
 
 (def margin-percent-of-notional 0.20)
 (def option-fee-per-action 1.00)
+(def stop-date (LocalDate/parse "2021-06-18"))
 
 (defn log-balance! [{:as args :keys [log! log-balance! t balance]}
                     send-to-file]
@@ -87,10 +88,11 @@
         t (.-quoteDateTime db-key)]
     (println t)
     (log! (str "advancing to t " t))
-    (-> args
-        (assoc :state :find-target-exp-date
-               :t t
-               :db-key db-key))))
+    (cond-xlet
+     :let [args (mac/args db-key t)]
+     :let [date (.toLocalDate t)]
+     (.equals date stop-date) (assoc args :state :finish-backtest)
+     :else (assoc args :state :find-target-exp-date))))
 
 (def market-closed-due-to-bush-death-date "2018-12-05")
 
@@ -320,11 +322,18 @@
        (update :t (fn [^ZonedDateTime t] (.plusMinutes t 1)))
        (assoc :state :tick))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn finish-backtest [args]
+  nil)
+
 (defn write-backtest-result! [{:keys [*balances *logs]}]
   (spit "balances.log" (->> (interpose "\n" @*balances)
                             (apply str)))
   (spit "backtest.log" (->> (interpose "\n" @*logs)
                             (apply str))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn short-put-strategy [{:as args :keys []}]
   (let [*logs (atom [])
@@ -362,6 +371,7 @@
         (= state :close-short-position) (recur (close-existing-position args))
         (= state :assignment) (recur (assignment args))
         (= state :time-travel-back-and-open) (recur (time-travel-back-and-open args))
+        (= state :finish-backtest) (finish-backtest args)
         :else args))
      (finally
       (write-backtest-result! (->hash *balances *logs))))))
