@@ -1,4 +1,5 @@
 # Clojure
+.cache
 /.cpcache
 /.nrepl-port
 

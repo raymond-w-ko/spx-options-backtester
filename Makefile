@@ -1,11 +1,9 @@
-JVM_ARGS := -J-Djdk.attach.allowAttachSelf
-CLJ_EXTRA_SAFETY_ARGS := -J-Dclojure.core.async.go-checking=true
-
-javac:
-	clj -T:build javac
-repl:
-	clojure $(JVM_ARGS) $(CLJ_EXTRA_SAFETY_ARGS) -M:repl
+repl: rebel-repl
+rebel-repl:
+	exec clojure -M:repl/rebel
 run:
-	clojure $(JVM_ARGS) -J-Xmx16G -M:none -m app.backtester
+	clojure -M:run
 upgrade-deps:
 	clojure -M:outdated --upgrade
+javac:
+	exec clojure -T:build javac
