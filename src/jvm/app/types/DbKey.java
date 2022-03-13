@@ -8,62 +8,32 @@ import static app.types.Utils.QuoteDateTimeToInstant;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.time.Instant;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.StringUtils;
-import java.time.Instant;
-import java.time.ZonedDateTime;
-import java.time.ZoneId;
 
-public final class DbKey implements Cloneable {
-  public static ZoneId zoneId = ZoneId.of("US/Eastern");
+public final class DbKey {
 
   /// use joda time for instant
-  public java.time.ZonedDateTime quoteDateTime;
-  /// must be a string of a length of 5
-  public String root;
-  /// P or C
-  public char optionType;
+  public java.time.Instant quoteDateTime;
   /// "YYYY-MM-DD"
   public String expirationDate;
-  public int strike;
+  /// as of year 2022, SPX all time high is around 4800
+  public short strike;
 
-  public DbKey() {
-    this.root = "     ";
-    this.optionType = 'P';
-    this.expirationDate = "0000-00-00";
-    this.strike = 0;
-  }
-  
-  public Object clone()throws CloneNotSupportedException{  
-    return super.clone();  
-  }  
+  public DbKey() {}
 
   public static DbKey fromCsvLineTokens(String[] tokens) {
     DbKey k = new DbKey();
-    // [0] is always "^SPX"
-
+    // [0] is the underlying such as "^SPX", this depends on the directory of the Env
     // [1] is quote_datetime
-    k.quoteDateTime = ZonedDateTime.ofInstant(QuoteDateTimeToInstant(tokens[1]), zoneId);
-
-    // [2] is root
-    {
-      var root = tokens[2];
-      final var n = root.length();
-      if (n < 5) {
-        var numSpaces = 5 - n;
-        for (int i = 0; i < numSpaces; ++i) {
-          root = root + " ";
-        }
-      }
-      k.root = root;
-    }
-
+    k.quoteDateTime = QuoteDateTimeToInstant(tokens[1]);
+    // [2] is root, which is max 5 characters, this depends on the directory of the Env or the name of the DB
     // [3] is expiration date
     k.expirationDate = tokens[3];
-
     // [4] is strike
     {
       var strike = tokens[4];
@@ -74,31 +44,24 @@ public final class DbKey implements Cloneable {
       } else {
         throw new RuntimeException("strike suffix must be '.000', got input: " + strike);
       }
-      k.strike = Integer.parseInt(strike);
+      k.strike = Short.parseShort(strike);
     }
-
-    // [5] is optionType
-    char optionType = tokens[5].charAt(0);
-    k.optionType = optionType;
+    // [5] is the option type (P, C) which depends on the directory of the Env
 
     return k;
   }
 
   public UnsafeBuffer toBuffer() {
-    final var bb = ByteBuffer.allocateDirect(4 + 5 + 1 + 4 + 4);
+    final var bb = ByteBuffer.allocateDirect(4 + 4 + 2);
     final var buf = new UnsafeBuffer(bb);
     var i = 0;
 
-    buf.putBytes(i, InstantToByteBuffer(quoteDateTime.toInstant()), 4, 4);
+    buf.putBytes(i, InstantToByteBuffer(quoteDateTime), 0, 4);
     i += 4;
-    buf.putStringWithoutLengthUtf8(i, root);
-    i += 5;
-    buf.putByte(i, (byte) optionType);
-    i += 1;
     buf.putInt(i, ExpDateToInt(expirationDate), ByteOrder.BIG_ENDIAN);
     i += 4;
-    buf.putInt(i, strike, ByteOrder.BIG_ENDIAN);
-    i += 4;
+    buf.putShort(i, strike, ByteOrder.BIG_ENDIAN);
+    i += 2;
 
     return buf;
   }
@@ -107,16 +70,12 @@ public final class DbKey implements Cloneable {
     final var k = new DbKey();
     var i = 0;
 
-    k.quoteDateTime = ZonedDateTime.ofInstant(ByteBufferToInstant(buf, i), zoneId);
+    k.quoteDateTime = ByteBufferToInstant(buf, i);
     i += 4;
-    k.root = buf.getStringWithoutLengthUtf8(i, 5);
-    i += 5;
-    k.optionType = (char) buf.getByte(i);
-    i += 1;
     k.expirationDate = IntToExpDate(buf.getInt(i, ByteOrder.BIG_ENDIAN));
     i += 4;
-    k.strike = buf.getInt(i, ByteOrder.BIG_ENDIAN);
-    i += 4;
+    k.strike = buf.getShort(i, ByteOrder.BIG_ENDIAN);
+    i += 2;
 
     return k;
   }

@@ -4,10 +4,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.ZonedDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.concurrent.ConcurrentHashMap;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -15,22 +16,31 @@ import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.StringUtils;
 
 public final class Utils {
-  public static ZoneId zoneId = ZoneId.of("US/Eastern");
 
   private Utils() {}
 
-  private static LRUMap<String, Instant> stringToInstantCache =
-      new LRUMap<String, Instant>(1024 * 1024);
-  private static DateTimeFormatter dateTimeFormatter =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+  private static int CACHE_MAX_SIZE = 1024 * 1024;
+  private static ConcurrentHashMap<String, Instant> instantLookupMap = new ConcurrentHashMap<String, Instant>(
+    CACHE_MAX_SIZE
+  );
+  private static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(
+    "yyyy-MM-dd HH:mm:ss"
+  );
+  private static ZoneId NewYorkZoneId = ZoneId.of("America/New_York");
 
   public static Instant QuoteDateTimeToInstant(String s) {
-    if (stringToInstantCache.containsKey(s)) {
-      return stringToInstantCache.get(s);
+    if (instantLookupMap.containsKey(s)) {
+      return instantLookupMap.get(s);
+    }
+    if (instantLookupMap.size() > CACHE_MAX_SIZE) {
+      System.out.println("instantLookupMap clear()");
+      instantLookupMap.clear();
     }
 
-    final var t = LocalDateTime.parse(s, dateTimeFormatter).toInstant(ZoneOffset.UTC);
-    stringToInstantCache.put(s, t);
+    final var ldt = LocalDateTime.parse(s, dateTimeFormatter);
+    final var zdt = ZonedDateTime.of(ldt, NewYorkZoneId);
+    final var t = zdt.toInstant();
+    instantLookupMap.put(s, t);
     return t;
   }
 
@@ -43,33 +53,26 @@ public final class Utils {
     return day + (100 * month) + (10000 * year);
   }
 
-  private static LRUMap<Integer, String> expDateIntToString = new LRUMap<Integer, String>(1024 * 1024);
   public static String IntToExpDate(int i) {
-    if (expDateIntToString.containsKey(i)) {
-      return expDateIntToString.get(i);
-    }
-    
     final String day = StringUtils.leftPad(String.valueOf(i % 100), 2, "0");
     i = i / 100;
     final String month = StringUtils.leftPad(String.valueOf(i % 100), 2, "0");
     i = i / 100;
     final String year = String.valueOf(i);
-    final var s = year + "-" + month + "-" + day;
-    expDateIntToString.put(i, s);
-    return s;
+    return year + "-" + month + "-" + day;
   }
 
   public static ByteBuffer InstantToByteBuffer(Instant t) {
-    final long sec = t.getEpochSecond();
-    final var buf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN).putLong(sec);
+    final int secs = (int) t.getEpochSecond();
+    final var buf = ByteBuffer.allocateDirect(4).order(ByteOrder.BIG_ENDIAN).putInt(secs);
     return buf;
   }
 
   public static Instant ByteBufferToInstant(DirectBuffer srcBuf, int i) {
-    final var dstBuf = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
-    srcBuf.getBytes(i, dstBuf, 4, 4);
-    final long sec = dstBuf.getLong(0);
-    return Instant.ofEpochSecond(sec);
+    final var dstBuf = ByteBuffer.allocateDirect(4).order(ByteOrder.BIG_ENDIAN);
+    srcBuf.getBytes(i, dstBuf, 0, 4);
+    final int secs = dstBuf.getInt(0);
+    return Instant.ofEpochSecond((long) secs);
   }
 
   private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
